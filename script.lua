@@ -1,163 +1,413 @@
--- =====================================================================
--- PHANTOM DUELS LOADER  |  https://discord.gg/KcEqqvn5fd
--- Takes your Clover Duels script and rebrands it to Phantom Duels
--- before running it (names, title, discord, logo on the buttons).
---
--- SETUP
---   1. Save your Clover script in your executor's workspace folder
---      as  Clover.lua   (or change SOURCE_FILE below), OR set
---      SOURCE_URL to a link that returns the raw script.
---   2. Upload your PD logo to Roblox as a Decal/Image and paste the
---      number into LOGO_ID. Leave it "" to run without the logo.
---   3. Run this file.
--- =====================================================================
+local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
+local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
+local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
+local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
 
-local SOURCE_FILE = "Clover.lua"
-local SOURCE_URL = ""            -- optional: raw link to the Clover script
-local LOGO_ID = ""               -- e.g. "123456789012345"
-local LOGO_TRANSPARENCY = 0.65   -- logo on the round/square buttons
-local DISCORD = ".gg/KcEqqvn5fd"
+local Window = Library:CreateWindow({
+    Title = 'Byte.LOL | nigger script by an nigger                                      by harlem',
+    Center = true, -- Set Center to true if you want the menu to appear in the center
+    AutoShow = true, -- Set AutoShow to true if you want the menu to appear when it is created
+    TabPadding = 8,
+    MenuFadeTime = 0.2
+    --Position = float (optional)
+    --Size = float (optional)
+})
 
-_G.PHANTOM_LOGO_ID = LOGO_ID
-_G.PHANTOM_LOGO_TRANSPARENCY = LOGO_TRANSPARENCY
+local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stratxgy/Aura/refs/heads/main/Modules/ESP/ESP.lua"))()
+local hbar = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stratxgy/Aura/refs/heads/main/Modules/ESP/hbar.lua"))()
+local viewtracer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stratxgy/Aura/refs/heads/main/Modules/ESP/ViewTracerESP.lua"))()
+local pname = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stratxgy/Aura/refs/heads/main/Modules/ESP/pname.lua"))()
+local ptool = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stratxgy/Aura/refs/heads/main/Modules/ESP/ptool.lua"))()
+local chams = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stratxgy/Roblox-Chams-Highlight/refs/heads/main/Highlight.lua"))()
+local targethud = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stratxgy/Lua-TargetHud/refs/heads/main/targethud.lua"))()
 
--- ---------------------------------------------------------------------
--- 1. get the source
--- ---------------------------------------------------------------------
-local src
-if SOURCE_URL ~= "" then
-    local ok, res = pcall(function()
-        return game:HttpGet(SOURCE_URL)
-    end)
-    if ok then src = res end
-end
-if not src and readfile and isfile and isfile(SOURCE_FILE) then
-    src = readfile(SOURCE_FILE)
-end
-if type(src) ~= "string" or #src < 1000 then
-    warn("[Phantom Duels] could not load the source. Put your script in the workspace as " .. SOURCE_FILE .. " or set SOURCE_URL.")
-    return
-end
+local Aimbot = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stratxgy/esp-aimbot/refs/heads/main/Aimbot/aimbot.lua"))()
+local triggerbot = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stratxgy/Roblox-Lua-Triggerbot/refs/heads/main/Triggerbot.lua"))()
 
--- ---------------------------------------------------------------------
--- 2. plain-text replace helper (no Lua patterns)
--- ---------------------------------------------------------------------
-local function replaceAll(s, find, repl)
-    local out, pos = {}, 1
-    while true do
-        local a, b = string.find(s, find, pos, true)
-        if not a then
-            out[#out + 1] = string.sub(s, pos)
-            break
+local speed = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stratxgy/Lua-Speed/refs/heads/main/speed.lua"))()
+local spin = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stratxgy/Aura/refs/heads/main/Modules/spinlock.lua"))()
+local aaimweld = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stratxgy/Aura/refs/heads/main/Modules/aaimweld.lua"))()
+
+
+
+local Tabs = {
+    aimbot = Window:AddTab('Aimbot'),
+    visuals = Window:AddTab('Visuals'),
+    player = Window:AddTab('Player'),
+    ['UI Settings'] = Window:AddTab('UI Settings')
+}
+
+local LeftGroupBox = Tabs.aimbot:AddLeftGroupbox('Aimbot')
+
+LeftGroupBox:AddToggle('Aimbot', {
+    Text = 'Aimbot',
+    Default = false, -- Default value (true / false)
+    Tooltip = 'turns on aimbot i think', -- Information shown when you hover over the toggle
+    Callback = function(Value)
+        Aimbot.Load()
+    end
+})
+
+LeftGroupBox:AddDropdown('Lock Part', {
+    Values = { 'Head', 'HumanoidRootPart', 'UpperTorso', 'LowerTorso' },
+    Default = 1, -- number index of the value / string
+    Multi = false, -- true / false, allows multiple choices to be selected
+    Text = 'Lock Part',
+    Tooltip = 'lockpart changer', -- Information shown when you hover over the dropdown
+    Callback = function(Value)
+        getgenv().Aimbot.Settings.LockPart = Value
+    end
+})
+
+
+
+LeftGroupBox:AddLabel('Lock Button'):AddKeyPicker('Lock Button', {
+    Default = 'MB2', -- String as the name of the keybind (MB1, MB2 for mouse buttons)
+    Text = 'Lock Button Keybind', -- Text to display in the keybind menu
+    NoUI = false, -- Set to true if you want to hide from the Keybind menu
+    -- Occurs when the keybind itself is changed, `New` is a KeyCode Enum OR a UserInputType Enum
+    ChangedCallback = function(New)
+        getgenv().Aimbot.Settings.TriggerKey = New
+    end
+})
+
+
+LeftGroupBox:AddSlider('FOV', {
+    Text = 'FOV Circle',
+    Default = 35,
+    Min = 0,
+    Max = 500,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(Value)
+        getgenv().Aimbot.FOVSettings.Radius = Value
+    end
+})
+
+LeftGroupBox:AddLabel('FOVColor'):AddColorPicker('FOV Color', {
+    Default = Color3.new(1, 1, 1),
+    Title = 'FOV Colorpicker', -- Optional. Allows you to have a custom color picker title (when you open it)
+    Callback = function(Value)
+        getgenv().Aimbot.FOVSettings.Color = Value
+    end
+})
+
+LeftGroupBox:AddLabel('FOV Color when Locked'):AddColorPicker('FOV Color when Locked', {
+    Default = Color3.new(1, 0, 0), 
+    Title = 'FOV Colorpicker when locked', -- Optional. Allows you to have a custom color picker title (when you open it)
+    Callback = function(Value)
+        getgenv().Aimbot.FOVSettings.LockedColor = Value
+    end
+})
+
+LeftGroupBox:AddSlider('Smoothness (lower = faster)', {
+    Text = 'Smoothness (lower = faster)',
+    Default = 0,
+    Min = 0,
+    Max = 5,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(Value)
+        getgenv().Aimbot.Settings.Sensitivity = Value
+    end
+})
+
+
+
+local LeftGroupBox = Tabs.aimbot:AddLeftGroupbox('Triggerbot')
+
+
+local tbot = LeftGroupBox:AddButton({
+    Text = 'TriggerBot',
+    Func = function()
+        getgenv().triggerbot.load()
+    end,
+    DoubleClick = false,
+    Tooltip = 'probably turns on a triggerbot' -- When you hover over the button this appears
+})
+
+
+LeftGroupBox:AddLabel('TriggerBot Toggle Key'):AddKeyPicker('TriggerBot Toggle Key', {
+
+    Default = 'T', -- String as the name of the keybind (MB1, MB2 for mouse buttons)
+    SyncToggleState = false,
+
+    Text = 'TriggerBot Toggle Key', -- Text to display in the keybind menu
+    NoUI = false, -- Set to true if you want to hide from the Keybind menu
+
+    -- Occurs when the keybind itself is changed, `New` is a KeyCode Enum OR a UserInputType Enum
+    ChangedCallback = function(New)
+        getgenv().triggerbot.Settings.toggleKey = New
+    end
+})
+
+LeftGroupBox:AddSlider('Click Delay (Seconds)', {
+    Text = 'Click Delay (Seconds)',
+    Default = 0,
+    Min = 0,
+    Max = 2,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(Value)
+        getgenv().triggerbot.Settings.clickDelay = Value
+    end
+})
+
+
+
+
+local RightGroupBox = Tabs.aimbot:AddRightGroupbox('Checks')
+
+RightGroupBox:AddToggle('TeamCheck', {
+    Text = 'Team Check',
+    Default = false, -- Default value (true / false)
+    Tooltip = 'checks if a player is on your team', -- Information shown when you hover over the toggle
+    Callback = function(Value)
+        getgenv().Aimbot.Settings.TeamCheck = Value
+    end
+})
+
+RightGroupBox:AddToggle('Wall Check', {
+    Text = 'Wall Check',
+    Default = false, -- Default value (true / false)
+    Tooltip = 'checks if a player is behind a wall', -- Information shown when you hover over the toggle
+    Callback = function(Value)
+        getgenv().Aimbot.Settings.WallCheck = Value
+    end
+})
+
+RightGroupBox:AddToggle('AliveCheck', {
+    Text = 'Alive Check',
+    Default = false, -- Default value (true / false)
+    Tooltip = 'checks if a player is alive', -- Information shown when you hover over the toggle
+    Callback = function(Value)
+        getgenv().Aimbot.Settings.AliveCheck = Value
+    end
+})
+
+RightGroupBox:AddToggle('Aimbot Toggle (hold / toggle)', {
+    Text = 'Aimbot Toggle (hold / toggle)',
+    Default = false, -- Default value (true / false)
+    Tooltip = 'if its false that means you have to hold the button if true its toggle', -- Information shown when you hover over the toggle
+    Callback = function(Value)
+        getgenv().Aimbot.Settings.Toggle = Value
+    end
+})
+
+
+--// ////// \\\\\\ //////// \\\\\\\\ //////// \\\\\\\ /////// \\\\\\\ /////// \\\\\\\           | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | 
+
+
+local LeftGroupBox = Tabs.visuals:AddLeftGroupbox('Healthbar')
+
+LeftGroupBox:AddToggle('Health Bar', {
+    Text = 'Health Bar',
+    Default = false, -- Default value (true / false)
+    Tooltip = 'hopefully toggles health bar', -- Information shown when you hover over the toggle
+    Callback = function(Value)
+        getgenv().hbar.enabled = Value
+    end
+})
+
+local LeftGroupBox = Tabs.visuals:AddLeftGroupbox('Target Hud')
+
+LeftGroupBox:AddToggle('Target Hud', {
+    Text = 'Target Hud',
+    Default = false, -- Default value (true / false)
+    Tooltip = 'turns on a box displaying information when you hover over people', -- Information shown when you hover over the toggle
+    Callback = function(Value)
+        getgenv().targethud.enabled = Value
+    end
+})
+
+local LeftGroupBox = Tabs.visuals:AddLeftGroupbox('Menu Settings')
+
+LeftGroupBox:AddToggle('Aura Watermark', { 
+    Text = 'Aura Watermark', 
+    Default = false, 
+    Tooltip = 'Aura watermark', 
+    Callback = function(Value)
+        if Value then
+            Library:SetWatermarkVisibility(true)
+            if not _G.WatermarkConnection then
+                local FrameTimer = tick()
+                local FrameCounter = 0
+                local FPS = 60
+                _G.WatermarkConnection = game:GetService('RunService').RenderStepped:Connect(function()
+                    FrameCounter += 1
+                    if (tick() - FrameTimer) >= 1 then
+                        FPS = FrameCounter
+                        FrameTimer = tick()
+                        FrameCounter = 0
+                    end
+                    Library:SetWatermark(('Aura - Universal | %s fps | %s ms'):format(
+                        math.floor(FPS),
+                        math.floor(game:GetService('Stats').Network.ServerStatsItem['Data Ping']:GetValue())
+                    ))
+                end)
+            end
+        else
+            Library:SetWatermarkVisibility(false)
+            if _G.WatermarkConnection then
+                _G.WatermarkConnection:Disconnect()
+                _G.WatermarkConnection = nil
+            end
         end
-        out[#out + 1] = string.sub(s, pos, a - 1)
-        out[#out + 1] = repl
-        pos = b + 1
     end
-    return table.concat(out)
-end
+})
+-- wow that was confusing
 
--- ---------------------------------------------------------------------
--- 3. rebrand
--- ---------------------------------------------------------------------
--- avatar item prefix is length-checked in the source ("CloverAvatar_" is 13
--- chars, "PhantomAvatar_" is 14), so fix that before the generic rename
-src = replaceAll(src, 'sub(1, 13) == "CloverAvatar_"', 'sub(1, 14) == "PhantomAvatar_"')
 
--- discord: swap the old invite for yours everywhere it appears
--- (the old link is split in two pieces so it never shows up in this file)
--- covers both the "cloverhub" and "cloverduels" invites, with or without https://
-for _, name in ipairs({ "clover" .. "hub", "clover" .. "duels" }) do
-    src = replaceAll(src, "https://discord.gg/" .. name, DISCORD)
-    src = replaceAll(src, "discord.gg/" .. name, DISCORD)
-end
--- the full link is longer, so let the in-world billboard text scale to fit
-src = replaceAll(src, "speedBranding.TextSize = 28", "speedBranding.TextScaled = true")
-
--- "PHANTOM" is one letter longer than "CLOVER", shrink the title text a bit
-src = replaceAll(src, "imageLabel.TextSize = 48", "imageLabel.TextSize = 36")
-src = replaceAll(src, "rootPart.TextSize = 24", "rootPart.TextSize = 18")
-
--- names / titles / config file / globals (all consistent renames)
--- "cloverduels" -> "phantomduels" (explicit, runs before the generic rename)
-src = replaceAll(src, "CLOVERDUELS", "PHANTOMDUELS")
-src = replaceAll(src, "CloverDuels", "PhantomDuels")
-src = replaceAll(src, "Cloverduels", "Phantomduels")
-src = replaceAll(src, "cloverduels", "phantomduels")
--- plain "clover" -> "phantom"
-src = replaceAll(src, "CLOVER", "PHANTOM")
-src = replaceAll(src, "Clover", "Phantom")
-src = replaceAll(src, "clover", "phantom")
-
--- logo instead of the clover icon (title, mini button, background decor)
-src = replaceAll(src, 'local iconScale = Instance.new("UIScale", holder)', [[
-if (_G.PHANTOM_LOGO_ID or "") ~= "" then
-    local logoImg = Instance.new("ImageLabel", holder)
-    logoImg.BackgroundTransparency = 1
-    logoImg.Size = UDim2.fromScale(1, 1)
-    logoImg.Image = "rbxassetid://" .. tostring(_G.PHANTOM_LOGO_ID)
-    logoImg.ScaleType = Enum.ScaleType.Fit
-    logoImg.ZIndex = z
-    Instance.new("UIScale", holder).Scale = (pixelSize or 100) / 100
-    holder.Parent = parent
-    return holder
-end
-local iconScale = Instance.new("UIScale", holder)]])
-
--- ---------------------------------------------------------------------
--- 4. put the logo on every button (mobile panel buttons + floating buttons)
--- ---------------------------------------------------------------------
-do
-    local function guiName(d)
-        local g = d:FindFirstAncestorWhichIsA("ScreenGui")
-        return g and g.Name or ""
+LeftGroupBox:AddToggle('Aura Keybind Window', {
+    Text = 'Aura Keybind Window',
+    Default = false, -- Default value (true / false)
+    Tooltip = 'this probably works correctly', -- Information shown when you hover over the toggle
+    Callback = function(Value)
+        Library.KeybindFrame.Visible = Value;
     end
-    local function wanted(d)
-        local n = guiName(d)
-        return n:find("^Phantom") ~= nil or n == "BatV2Button" or n == "InstaResetButton"
+})
+
+
+
+local RightGroupBox = Tabs.visuals:AddRightGroupbox('Chams')
+
+RightGroupBox:AddToggle('Chams', {
+    Text = 'Chams',
+    Default = false, -- Default value (true / false)
+    Tooltip = 'basically outline esp', -- Information shown when you hover over the toggle
+    Callback = function(Value)
+        getgenv().chams.enabled = Value
     end
-    local function bake(d)
-        if (_G.PHANTOM_LOGO_ID or "") == "" then return end
-        local isButton = d:IsA("TextButton")
-        local isFloating = d:IsA("Frame") and d.Name == "Frame" and d.Parent and d.Parent:IsA("ScreenGui")
-        if not (isButton or isFloating) then return end
-        if d:FindFirstChild("PhantomLogo") or not wanted(d) then return end
-        task.defer(function()
-            if not d.Parent or d:FindFirstChild("MiniPhantomIcon") then return end
-            local w, h = d.AbsoluteSize.X, d.AbsoluteSize.Y
-            if w < 40 or h < 40 then return end
-            local img = Instance.new("ImageLabel")
-            img.Name = "PhantomLogo"
-            img.BackgroundTransparency = 1
-            img.Image = "rbxassetid://" .. tostring(_G.PHANTOM_LOGO_ID)
-            img.ImageTransparency = _G.PHANTOM_LOGO_TRANSPARENCY or 0.65
-            img.ScaleType = Enum.ScaleType.Fit
-            img.AnchorPoint = Vector2.new(0.5, 0.5)
-            img.Position = UDim2.new(0.5, 0, 0.5, 0)
-            local side = math.min(w, h) - 6
-            img.Size = UDim2.fromOffset(side, side)
-            img.ZIndex = d.ZIndex
-            img.Active = false
-            img.Parent = d
-        end)
+})
+
+RightGroupBox:AddToggle('Chams Team Check', {
+    Text = 'Chams Team Check',
+    Default = false, -- Default value (true / false)
+    Tooltip = 'checks if a player is on your team', -- Information shown when you hover over the toggle
+    Callback = function(Value)
+        getgenv().chams.teamCheck = Value
     end
-    local cg = game:GetService("CoreGui")
-    cg.DescendantAdded:Connect(bake)
-    pcall(function()
-        local pg = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui", 5)
-        if pg then pg.DescendantAdded:Connect(bake) end
-    end)
+})
+
+RightGroupBox:AddLabel('Chams Outline Color'):AddColorPicker('Chams Outline Color', {
+    Default = Color3.new(1, 1, 1), 
+    Title = 'Chams Outline Color Colorpicker', -- Optional. Allows you to have a custom color picker title (when you open it)
+    Transparency = 0, -- Optional. Enables transparency changing for this color picker (leave as nil to disable)
+    Callback = function(Value)
+        getgenv().chams.outlineColor = Value
+    end
+})
+
+RightGroupBox:AddSlider('Chams Outline Transparency', {
+    Text = 'Chams Outline Transparency',
+    Default = 0,
+    Min = 0,
+    Max = 1,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(Value)
+        getgenv().chams.outlineTransparency = Value
+    end
+})
+
+
+RightGroupBox:AddLabel('Chams Fill Color'):AddColorPicker('Chams Fill Color', {
+    Default = Color3.new(1, 0, 0), 
+    Title = 'Chams Fill Color Colorpicker', -- Optional. Allows you to have a custom color picker title (when you open it)
+    Transparency = 0, -- Optional. Enables transparency changing for this color picker (leave as nil to disable)
+    Callback = function(Value)
+        getgenv().chams.fillColor = Value
+    end
+})
+
+
+RightGroupBox:AddSlider('Chams Fill Transparency', {
+    Text = 'Chams Fill Transparency',
+    Default = 1,
+    Min = 0,
+    Max = 1,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(Value)
+        getgenv().chams.fillTransparency = Value
+    end
+})
+
+
+--// PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB PLAYERTAB 
+local LeftGroupBox = Tabs.player:AddLeftGroupbox('Speed')
+
+LeftGroupBox:AddToggle('Speed Master Switch', {
+    Text = 'Speed Master Switch',
+    Default = false, -- Default value (true / false)
+    Tooltip = 'sped', -- Information shown when you hover over the toggle
+    Callback = function(Value)
+        getgenv().speed.enabled = Value
+    end
+})
+
+LeftGroupBox:AddLabel('Speed Toggle Button'):AddKeyPicker('Speed Toggle Button', {
+    Default = 'KeypadDivide', -- String as the name of the keybind (MB1, MB2 for mouse buttons)
+    Text = 'Lock Button Keybind', -- Text to display in the keybind menu
+    NoUI = false, -- Set to true if you want to hide from the Keybind menu
+    -- Occurs when the keybind itself is changed, `New` is a KeyCode Enum OR a UserInputType Enum
+    ChangedCallback = function(New)
+        getgenv().speed.keybind = New
+    end
+})
+
+LeftGroupBox:AddSlider('Speed Amount', {
+    Text = 'Speed Amount',
+    Default = 16,
+    Min = 1,
+    Max = 300,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(Value)
+        getgenv().speed.speed = Value
+    end
+})
+
+LeftGroupBox:AddToggle('Enhanced Control', {
+    Text = 'Enhanced Control',
+    Default = false, -- Default value (true / false)
+    Tooltip = 'Usually you slide all around, but this makes you not do that', -- Information shown when you hover over the toggle
+    Callback = function(Value)
+        getgenv().speed.control = Value
+    end
+})
+
+LeftGroupBox:AddSlider('Control Amount (Friction)', {
+    Text = 'Control Amount (Friction)',
+    Default = 2.0,
+    Min = 1,
+    Max = 5,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(Value)
+        getgenv().speed.friction = Value
+    end
+})
+
+
+
+local function convertToKeyCode(input)
+    local keyMappings = {
+        LeftAlt = Enum.KeyCode.LeftAlt
+    }
+    return keyMappings[input] or input
 end
 
--- ---------------------------------------------------------------------
--- 5. run it
--- ---------------------------------------------------------------------
-local fn, err = loadstring(src)
-if not fn then
-    warn("[Phantom Duels] compile error: " .. tostring(err))
-    return
-end
-local ok, runErr = pcall(fn)
-if not ok then
-    warn("[Phantom Duels] runtime error: " .. tostring(runErr))
-end
+local MenuGroup = Tabs['UI Settings']:AddLeftGroupbox('Menu')
+MenuGroup:AddButton('Unload', function() Library:Unload() end)
+MenuGroup:AddLabel('Menu bind'):AddKeyPicker('MenuKeybind', { Default = 'LeftAlt', NoUI = true, Text = 'Menu keybind' })
+Library.ToggleKeybind = Options.MenuKeybind -- Allows you to have a custom keybind for the menu
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
+ThemeManager:SetFolder('Aura')
+SaveManager:SetFolder('Aura/Da Hood')
+SaveManager:BuildConfigSection(Tabs['UI Settings'])
+ThemeManager:ApplyToTab(Tabs['UI Settings'])
+SaveManager:LoadAutoloadConfig()
